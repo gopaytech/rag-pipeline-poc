@@ -1,9 +1,6 @@
 package tools
 
 import (
-	"context"
-	"log/slog"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -24,15 +21,3 @@ type (
 		TopK []string `json:"top_k" jsonschema:"the top k results from the vector database search"`
 	}
 )
-
-func QueryFunc(ctx context.Context, req *mcp.CallToolRequest, input QueryInput) (*mcp.CallToolResult, *QueryOutput, error) {
-	slog.LogAttrs(ctx,
-		slog.LevelInfo,
-		"received query tool request",
-		slog.String("query", input.Query),
-		slog.Any("req", req),
-	)
-	return nil, &QueryOutput{
-		TopK: []string{"result1", "result2", "result3"},
-	}, nil
-}

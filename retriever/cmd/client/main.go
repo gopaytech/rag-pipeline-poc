@@ -17,30 +17,11 @@ var (
 	Version   = "dev"
 )
 
-func initializeLogger(debug, json bool) {
-	var opts slog.HandlerOptions
-	if debug {
-		opts.Level = slog.LevelDebug
-	} else {
-		opts.Level = slog.LevelInfo
-	}
-	var handler slog.Handler
-	if json {
-		handler = slog.NewJSONHandler(os.Stdout, &opts)
-	} else {
-		handler = slog.NewTextHandler(os.Stdout, &opts)
-	}
-	slog.SetDefault(slog.New(handler))
-}
-
 func run(ctx context.Context, args []string) error {
 	flag, err := flagset.ParseFlag(args[:])
 	if err != nil {
 		return err
 	}
-
-	initializeLogger(flag.Debug(), flag.JSON())
-
 	if flag.Version() {
 		slog.LogAttrs(ctx,
 			slog.LevelInfo,
