@@ -35,6 +35,19 @@ services:
       timeout: 20s
       retries: 3
 
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/raw;
+      exit 0;
+      "
+
   standalone:
     container_name: milvus-standalone
     image: milvusdb/milvus:v2.6.5

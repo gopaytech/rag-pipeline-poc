@@ -29,3 +29,8 @@ async def download_file(file_token: str):
         raise HTTPException(status_code=404, detail="File not found")
     
     return FileResponse(path=file_path, filename=os.path.basename(file_path), media_type='application/octet-stream')
+
+
+@app.get("/feishu/drive/list-files")
+async def list_files():
+    return {"files": list(FILE_MAPPING.keys())}
