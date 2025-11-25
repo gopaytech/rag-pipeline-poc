@@ -1,7 +1,9 @@
 package tools
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 
@@ -54,22 +56,31 @@ func (t *Tools) Query(ctx context.Context,
 	} else {
 		denseVector = append(denseVector, entity.FloatVector(resp[0]))
 	}
+
+	// https://github.com/milvus-io/milvus/issues/45235
 	param := index.NewSparseAnnParam()
 	param.WithDropRatio(0.2)
+
 	rs, err := t.database.HybridSearch(ctx,
 		milvusclient.NewHybridSearchOption(
 			"pdf_collection",
-			2,
+			input.TopK,
+			// vector search
 			milvusclient.NewAnnRequest(
 				"vector_dense",
-				2,
+				input.TopK,
 				denseVector...,
 			).WithANNSField("vector_dense"),
+			// full-text search
 			milvusclient.NewAnnRequest(
 				"vector_sparse",
-				2,
+				input.TopK,
 				entity.Text(input.Query),
-			).WithANNSField("vector_sparse").WithAnnParam(param),
+			).
+				WithANNSField("vector_sparse").
+				WithAnnParam(param).
+				WithSearchParam("metric_type", "BM25").
+				WithSearchParam("index_type", string(index.SparseInverted)),
 		).
 			WithOutputFields("text", "metadata").
 			WithReranker(milvusclient.NewRRFReranker()),
@@ -78,16 +89,27 @@ func (t *Tools) Query(ctx context.Context,
 		return nil, nil, err
 	}
 
-	for _, r := range rs {
-		t.logger.LogAttrs(ctx,
-			slog.LevelInfo,
-			"field info",
-			slog.Any("C", r.GetColumn("text").FieldData().GetScalars().GetStringData().GetData()),
-			slog.Any("D", r.GetColumn("metadata").FieldData().GetScalars().GetJsonData().GetData()),
-		)
+	if len(rs) == 0 || rs[0].ResultCount == 0 {
+		return nil, &QueryOutput{
+			TopK: []QueryResult{},
+		}, nil
 	}
 
+	topk := make([]QueryResult, 0, rs[0].ResultCount)
+
+	r := rs[0]
+	for i := 0; i < r.ResultCount; i++ {
+		var qr QueryResult
+		qr.Score = float64(r.Scores[i])
+		qr.Text = r.GetColumn("text").FieldData().GetScalars().GetStringData().GetData()[i]
+		if err := json.NewDecoder(bytes.NewReader(
+			r.GetColumn("metadata").FieldData().GetScalars().GetJsonData().GetData()[i],
+		)).Decode(&qr.Metadata); err != nil {
+			return nil, nil, err
+		}
+		topk = append(topk, qr)
+	}
 	return nil, &QueryOutput{
-		TopK: []string{"result1", "result2", "result3"},
+		TopK: topk,
 	}, nil
 }

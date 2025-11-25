@@ -9,7 +9,7 @@ CHUNK_SIZE = 1000
 VECTOR_DIM = EMBEDDING_FN.dim
 COLLECTION_NAME = 'pdf_collection'
 DATASET_DIR = './datasets'
-CLIENT = MilvusClient(uri=os.getenv('MILVUS_ADDR'))
+CLIENT = MilvusClient(uri=os.getenv('MILVUS_ADDR') or '')
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(
     chunk_size=CHUNK_SIZE,
     chunk_overlap=CHUNK_SIZE/5, # Overlap to maintain context between chunks

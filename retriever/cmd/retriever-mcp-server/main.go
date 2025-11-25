@@ -25,7 +25,7 @@ var (
 )
 
 func run(ctx context.Context, args []string) error {
-	flag, err := flagset.ParseFlag(args[:])
+	flag, err := flagset.ParseServerFlag(args[:])
 	if err != nil {
 		return err
 	}

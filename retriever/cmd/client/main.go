@@ -18,7 +18,7 @@ var (
 )
 
 func run(ctx context.Context, args []string) error {
-	flag, err := flagset.ParseFlag(args[:])
+	flag, err := flagset.ParseClientFlag(args[:])
 	if err != nil {
 		return err
 	}
@@ -35,11 +35,10 @@ func run(ctx context.Context, args []string) error {
 
 	slog.LogAttrs(ctx,
 		slog.LevelInfo,
-		"starting server",
+		"starting retriever mcp client",
 		slog.String("name", Name),
 		slog.String("version", Version),
 		slog.String("build_time", BuildTime),
-		slog.String("addr", flag.Addr()),
 	)
 
 	client := mcp.NewClient(&mcp.Implementation{
@@ -55,7 +54,7 @@ func run(ctx context.Context, args []string) error {
 		},
 	})
 
-	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: "http://localhost" + flag.Addr()}, &mcp.ClientSessionOptions{})
+	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: flag.ServerAddr()}, &mcp.ClientSessionOptions{})
 	if err != nil {
 		return err
 	}
@@ -80,7 +79,8 @@ func run(ctx context.Context, args []string) error {
 	result2, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "query",
 		Arguments: map[string]any{
-			"query": "example",
+			"query": flag.Query(),
+			"top_k": flag.TopK(),
 		},
 	})
 	if err != nil {

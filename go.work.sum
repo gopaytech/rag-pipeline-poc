@@ -28,6 +28,7 @@ cloud.google.com/go/cloudbuild v1.22.0/go.mod h1:p99MbQrzcENHb/MqU3R6rpqFRk/X+lN
 cloud.google.com/go/clouddms v1.8.4/go.mod h1:RadeJ3KozRwy4K/gAs7W74ZU3GmGgVq5K8sRqNs3HfA=
 cloud.google.com/go/cloudtasks v1.13.3/go.mod h1:f9XRvmuFTm3VhIKzkzLCPyINSU3rjjvFUsFVGR5wi24=
 cloud.google.com/go/compute v1.34.0/go.mod h1:zWZwtLwZQyonEvIQBuIa0WvraMYK69J5eDCOw9VZU4g=
+cloud.google.com/go/compute/metadata v0.6.0 h1:A6hENjEsCDtC1k8byVsgwvVcioamEHvZ4j01OwKxG9I=
 cloud.google.com/go/compute/metadata v0.6.0/go.mod h1:FjyFAW1MW0C203CEOMDTu3Dk1FlqW3Rga40jzHL4hfg=
 cloud.google.com/go/contactcenterinsights v1.17.1/go.mod h1:n8OiNv7buLA2AkGVkfuvtW3HU13AdTmEwAlAu46bfxY=
 cloud.google.com/go/container v1.42.2/go.mod h1:y71YW7uR5Ck+9Vsbst0AF2F3UMgqmsN4SP8JR9xEsR8=
