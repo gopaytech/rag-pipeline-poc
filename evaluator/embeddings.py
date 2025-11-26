@@ -1,3 +1,4 @@
+import os
 import requests
 from typing import List
 from langchain_core.embeddings import Embeddings
@@ -49,3 +50,13 @@ class ModelGardenEmbeddings(Embeddings):
     
     async def embed_text(self, text: str):
         return self.embed_query(text)
+
+def load_embeddings():
+    llm_type = os.getenv('LLM_TYPE')
+    embedding = os.getenv('EMBEDDING_MODEL')
+    if llm_type == "model_garden":
+        embed_url = os.getenv('EMBEDDING_URL')
+        return ModelGardenEmbeddings(api_url=embed_url, model=embedding)
+    elif llm_type == "ollama":
+        return OllamaRagasEmbeddings(model=embedding)
+    raise ValueError(f"Unsupported LLM type: {llm_type}")

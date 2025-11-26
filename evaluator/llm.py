@@ -1,7 +1,10 @@
 import requests
+import os
+
+from typing import List
 from langchain_core.language_models.llms import LLM
 from langchain_core.outputs.llm_result import LLMResult, Generation
-from typing import List
+from langchain_ollama import OllamaLLM
 
 class ModelGardenLLM(LLM):
     api_url: str
@@ -48,3 +51,13 @@ class ModelGardenLLM(LLM):
             text = self._call(prompt)
             generations.append([Generation(text=text)])
         return LLMResult(generations=generations)
+
+def load_llm():
+    llm_type = os.getenv('LLM_TYPE')
+    model = os.getenv('MODEL_GARDEN_MODEL')
+    if llm_type == "model_garden":
+        url = os.getenv('MODEL_GARDEN_URL')
+        return ModelGardenLLM(api_url=url, model=model)
+    elif llm_type == "ollama":
+        return OllamaLLM(model=model, temperature=0.4)
+    raise ValueError(f"Unsupported LLM type: {llm_type}")
