@@ -3,3 +3,4 @@ volumes
 .ipynb_checkpoints
 .env
 __pycache__
+.deepeval
