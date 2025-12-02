@@ -1,7 +1,7 @@
-
 from config.config import EmbeddingsConfig
 from langchain_core.embeddings import Embeddings
 from langchain_ollama import OllamaEmbeddings
+
 
 class EmbeddingsFactory:
     @staticmethod

@@ -3,6 +3,7 @@ import logging
 from langchain_core.document_loaders.base import BaseLoader
 from loader.directory import DirectoryLoader
 
+
 class Datasource:
     type: str
     path: str
@@ -12,6 +13,7 @@ class Datasource:
         self.type = type
         self.path = path
         self.url = url
+
 
 class DatasourceLoader(BaseLoader):
     loader: BaseLoader

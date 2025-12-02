@@ -9,6 +9,7 @@ from vector_store.milvus import MilvusVectorStore
 
 CONFIG_FILE_PATH = "config.yaml"
 
+
 def build_logger() -> logging.Logger:
     logger = logging.getLogger("knowledge_server")
     handler = logging.StreamHandler()
@@ -19,10 +20,11 @@ def build_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
     return logger
 
+
 def read_datasource(logger: logging.Logger) -> list[Datasource]:
     """
-        This is demo function to gather datasource from yaml.
-        TODO: document sources should be from database and user input later on.
+    This is demo function to gather datasource from yaml.
+    TODO: document sources should be from database and user input later on.
     """
     import yaml
 
@@ -35,9 +37,14 @@ def read_datasource(logger: logging.Logger) -> list[Datasource]:
             raise ValueError("Document source type is missing.")
         if source["type"] == "directory" and "path" not in source:
             raise ValueError("Directory source path is missing.")
-        datasources.append(Datasource(source["type"], source.get("path", None), source.get("url", None)))
+        datasources.append(
+            Datasource(
+                source["type"], source.get("path", None), source.get("url", None)
+            )
+        )
 
     return datasources
+
 
 def main():
     logger = build_logger()
@@ -56,7 +63,7 @@ def main():
     for doc in docs:
         logger.info("Loaded document from %s", doc.metadata.get("source", "unknown"))
         logger.debug("Document content: %s", doc.page_content[:100])
-    
+
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=config.chunk_size,
         chunk_overlap=config.chunk_overlap,
@@ -77,14 +84,24 @@ def main():
     logger.info("Adding %d document chunks to the vector store", len(chunks))
     vector_store.add_documents(chunks)
 
-    logger.debug("Searching for query: %s", "What is Barito project name is inspired from?")
-    results = vector_store.search(query="What is Barito project name is inspired from?", top_k=4)
+    logger.debug(
+        "Searching for query: %s", "What is Barito project name is inspired from?"
+    )
+    results = vector_store.search(
+        query="What is Barito project name is inspired from?", top_k=4
+    )
     logger.debug("Search results total: %s", len(results))
     for i, result in enumerate(results):
         logger.info("Result %d: %s", i + 1, result.page_content[:200])
 
-    logger.info("Searching for query: %s", "Who is the goto financial head of consumer payment infrastructure?")
-    results = vector_store.search(query="Who is the goto financial head of consumer payment infrastructure?", top_k=4)
+    logger.info(
+        "Searching for query: %s",
+        "Who is the goto financial head of consumer payment infrastructure?",
+    )
+    results = vector_store.search(
+        query="Who is the goto financial head of consumer payment infrastructure?",
+        top_k=4,
+    )
     logger.debug("Search results total: %s", len(results))
     for i, result in enumerate(results):
         logger.info("Result %d: %s", i + 1, result.page_content[:200])
@@ -100,6 +117,7 @@ def main():
         return [str(result) for result in results]
 
     mcp_server.run(transport="streamable-http")
+
 
 if __name__ == "__main__":
     main()
