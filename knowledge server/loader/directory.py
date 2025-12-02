@@ -21,6 +21,9 @@ class TextParser(BaseBlobParser):
 
 
 class DirectoryLoader(BaseLoader):
+    pdf_loader: PyPDFDirectoryLoader
+    md_loader: GenericLoader
+
     def __init__(self, path: str, logger) -> None:
         self.pdf_loader = PyPDFDirectoryLoader(
             path, recursive=False, mode="single", extraction_mode="layout"

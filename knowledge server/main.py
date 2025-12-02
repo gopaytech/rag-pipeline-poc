@@ -1,15 +1,13 @@
 import logging
 from config.config import Config
-from loader.loader import DirectoryLoader
+from loader.datasource import Datasource, DatasourceLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from mcp.server.fastmcp import FastMCP
-from langchain_core.documents import Document
 
 from model.factory import EmbeddingsFactory
 from vector_store.milvus import MilvusVectorStore
 
 CONFIG_FILE_PATH = "config.yaml"
-
 
 def build_logger() -> logging.Logger:
     logger = logging.getLogger("knowledge_server")
@@ -21,41 +19,25 @@ def build_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
     return logger
 
-
-
-def get_document_sources(logger: logging.Logger):
+def read_datasource(logger: logging.Logger) -> list[Datasource]:
     """
-        This is demo function to gather document source from yaml.
+        This is demo function to gather datasource from yaml.
         TODO: document sources should be from database and user input later on.
     """
     import yaml
 
-    with open("document_source.yaml", "r") as f:
-        config = yaml.safe_load(f)
+    with open("datasource.yaml", "r") as f:
+        from_yaml = yaml.safe_load(f)
 
-    document_sources = []
-    for source in config.get("document_source", []):
-        if source["type"] == "directory":
-            document_sources.append({
-                "type": "directory",
-                "path": source["path"],
-            })
-            logger.info("Added document source directory: %s", source["path"])
-        else:
-            logger.warning("Unsupported document source type: %s", source["type"])
-    return document_sources
+    datasources = []
+    for source in from_yaml.get("datasource", []):
+        if "type" not in source:
+            raise ValueError("Document source type is missing.")
+        if source["type"] == "directory" and "path" not in source:
+            raise ValueError("Directory source path is missing.")
+        datasources.append(Datasource(source["type"], source.get("path", None), source.get("url", None)))
 
-def get_document_from_source(source: dict, logger: logging.Logger) -> list[Document]:
-    """
-        This is demo function to load documents from source.
-        TODO: document loading should be more dynamic based on source type. it should in its own module.
-    """
-    if source["type"] == "directory":
-        loader = DirectoryLoader(source["path"], logger)
-        return loader.load()
-    else:
-        logger.warning("Unsupported document source type: %s", source["type"])
-        return []
+    return datasources
 
 def main():
     logger = build_logger()
@@ -64,12 +46,12 @@ def main():
     logger.setLevel(config.log_level.upper())
     logger.debug(config)
 
-    document_sources = get_document_sources(logger)
+    datasources = read_datasource(logger)
+    loaders = [DatasourceLoader(datasource, logger) for datasource in datasources]
 
-    logger.info("Loading documents from sources")
     docs = []
-    for source in document_sources:
-        docs.extend(get_document_from_source(source, logger))
+    for loader in loaders:
+        docs.extend(loader.load())
 
     for doc in docs:
         logger.info("Loaded document from %s", doc.metadata.get("source", "unknown"))
@@ -101,8 +83,8 @@ def main():
     for i, result in enumerate(results):
         logger.info("Result %d: %s", i + 1, result.page_content[:200])
 
-    logger.info("Searching for query: %s", "What inspire the barito project name?")
-    results = vector_store.search(query="What inspire the barito project name?", top_k=4)
+    logger.info("Searching for query: %s", "Who is the goto financial head of consumer payment infrastructure?")
+    results = vector_store.search(query="Who is the goto financial head of consumer payment infrastructure?", top_k=4)
     logger.debug("Search results total: %s", len(results))
     for i, result in enumerate(results):
         logger.info("Result %d: %s", i + 1, result.page_content[:200])
