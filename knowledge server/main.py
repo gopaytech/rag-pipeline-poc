@@ -36,26 +36,14 @@ def read_datasource(logger: logging.Logger) -> list[Datasource]:
 
     datasources = []
     for source in from_yaml.get("datasource", []):
-        if "type" not in source:
-            raise ValueError("Document source type is missing.")
-        if source["type"] == "directory":
-            if "path" not in source:
-                raise ValueError("Directory source path is missing.")
-            datasources.append(
-                Datasource(
-                    source["type"], source.get("path", None), source.get("url", None)
-                )
+        datasources.append(
+            Datasource(
+                type=source.get("type", ""),
+                path=source.get("path", ""),
+                url=source.get("url", ""),
+                id=source.get("id", "")
             )
-        elif source["type"] == "lark-doc":
-            if "id" not in source:
-                raise ValueError("Lark document source id is missing.")
-            datasources.append(Datasource(source["type"], id=source.get("id", None)))
-        elif source["type"] == "lark-wiki":
-            if "id" not in source:
-                raise ValueError("Lark wiki source id is missing.")
-            datasources.append(Datasource(source["type"], id=source.get("id", None)))
-        else:
-            raise ValueError(f"Unsupported document source type: {source['type']}")
+        )
 
     return datasources
 
