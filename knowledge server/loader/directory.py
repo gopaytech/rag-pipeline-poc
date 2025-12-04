@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+import logging
 from langchain_core.document_loaders.base import BaseBlobParser
 from langchain_community.document_loaders import (
     FileSystemBlobLoader,
@@ -23,10 +24,11 @@ class TextParser(BaseBlobParser):
 class DirectoryLoader(BaseLoader):
     pdf_loader: PyPDFDirectoryLoader
     md_loader: GenericLoader
+    logger: logging.Logger
 
-    def __init__(self, path: str, logger) -> None:
+    def __init__(self, path: str, logger: logging.Logger) -> None:
         self.pdf_loader = PyPDFDirectoryLoader(
-            path, recursive=False, mode="single", extraction_mode="layout"
+            path, recursive=True, mode="single", extraction_mode="layout"
         )
         self.md_loader = GenericLoader(
             blob_loader=FileSystemBlobLoader(

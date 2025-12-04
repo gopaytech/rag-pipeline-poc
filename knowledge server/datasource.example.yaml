@@ -1,0 +1,9 @@
+datasource:
+  - type: directory
+    path: ../datasets/
+  - type: lark-doc
+    id: "some-lark-doc-id"
+  - type: lark-wiki
+    id: "some-lark-wiki-id"
+  - type: lark-space
+    id: "some-lark-space-id"

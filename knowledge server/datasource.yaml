@@ -1,3 +1,0 @@
-datasource:
-  - type: directory
-    path: ../datasets/

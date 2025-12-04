@@ -1,11 +1,14 @@
 import logging
 from config.config import Config
-from loader.datasource import Datasource, DatasourceLoader
+from loader.factory import Datasource, LoaderFactory
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from mcp.server.fastmcp import FastMCP
 
 from model.factory import EmbeddingsFactory
 from vector_store.milvus import MilvusVectorStore
+
+import lark_oapi as lark
+
 
 CONFIG_FILE_PATH = "config.yaml"
 
@@ -31,15 +34,18 @@ def read_datasource(logger: logging.Logger) -> list[Datasource]:
     with open("datasource.yaml", "r") as f:
         from_yaml = yaml.safe_load(f)
 
+    if not from_yaml or "datasource" not in from_yaml:
+        logger.error("No datasource found in datasource.yaml")
+        return []
+
     datasources = []
     for source in from_yaml.get("datasource", []):
-        if "type" not in source:
-            raise ValueError("Document source type is missing.")
-        if source["type"] == "directory" and "path" not in source:
-            raise ValueError("Directory source path is missing.")
         datasources.append(
             Datasource(
-                source["type"], source.get("path", None), source.get("url", None)
+                type=source.get("type", ""),
+                path=source.get("path", ""),
+                url=source.get("url", ""),
+                id=source.get("id", ""),
             )
         )
 
@@ -53,16 +59,21 @@ def main():
     logger.setLevel(config.log_level.upper())
     logger.debug(config)
 
+    lark_log_level = getattr(
+        lark.LogLevel, config.log_level.upper(), lark.LogLevel.INFO
+    )
+    lark_client = (
+        lark.Client.builder()
+        .domain(config.lark.domain)
+        .app_id(config.lark.app_id)
+        .app_secret(config.lark.app_secret)
+        .log_level(lark_log_level)
+        .build()
+    )
+
     datasources = read_datasource(logger)
-    loaders = [DatasourceLoader(datasource, logger) for datasource in datasources]
-
-    docs = []
-    for loader in loaders:
-        docs.extend(loader.load())
-
-    for doc in docs:
-        logger.info("Loaded document from %s", doc.metadata.get("source", "unknown"))
-        logger.debug("Document content: %s", doc.page_content[:100])
+    loaderFactory = LoaderFactory(lark_client=lark_client, logger=logger)
+    loaders = [loaderFactory.get_loader(datasource) for datasource in datasources]
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=config.chunk_size,
@@ -70,9 +81,7 @@ def main():
         length_function=len,
         is_separator_regex=False,
     )
-
     embeddings = EmbeddingsFactory.get_embeddings(config.embeddings)
-
     vector_store = MilvusVectorStore(
         config.vector_store,
         chunk_size=config.chunk_size,
@@ -80,31 +89,29 @@ def main():
         embeddings=embeddings,
         logger=logger,
     )
-    chunks = splitter.split_documents(docs)
-    logger.info("Adding %d document chunks to the vector store", len(chunks))
-    vector_store.add_documents(chunks)
 
-    logger.debug(
-        "Searching for query: %s", "What is Barito project name is inspired from?"
-    )
-    results = vector_store.search(
-        query="What is Barito project name is inspired from?", top_k=4
-    )
-    logger.debug("Search results total: %s", len(results))
-    for i, result in enumerate(results):
-        logger.info("Result %d: %s", i + 1, result.page_content[:200])
+    for loader in loaders:
+        for doc in loader.lazy_load():
+            document = doc  # make a copy from iterator to single Document
+            logger.debug("Document content: %s", document.page_content[:20])
+            logger.info(
+                "Loaded document from %s", document.metadata.get("source", "unknown")
+            )
+            chunks = splitter.split_documents([document])
+            logger.info("Adding %d document chunks to the vector store", len(chunks))
+            vector_store.add_documents(chunks)
 
-    logger.info(
-        "Searching for query: %s",
+    queries = [
+        "What is Barito project name is inspired from?",
         "Who is the goto financial head of consumer payment infrastructure?",
-    )
-    results = vector_store.search(
-        query="Who is the goto financial head of consumer payment infrastructure?",
-        top_k=4,
-    )
-    logger.debug("Search results total: %s", len(results))
-    for i, result in enumerate(results):
-        logger.info("Result %d: %s", i + 1, result.page_content[:200])
+        "How to query pod metrics?",
+    ]
+    for query in queries:
+        logger.debug("Searching for query: %s", query)
+        results = vector_store.search(query=query, top_k=4)
+        logger.debug("Search results total: %s", len(results))
+        for i, result in enumerate(results):
+            logger.info("Result %d: %s", i + 1, result.page_content[:200])
 
     mcp_server = FastMCP("KnowledgeServer")
 
