@@ -34,6 +34,10 @@ def read_datasource(logger: logging.Logger) -> list[Datasource]:
     with open("datasource.yaml", "r") as f:
         from_yaml = yaml.safe_load(f)
 
+    if not from_yaml or "datasource" not in from_yaml:
+        logger.error("No datasource found in datasource.yaml")
+        return []
+
     datasources = []
     for source in from_yaml.get("datasource", []):
         datasources.append(
@@ -71,23 +75,13 @@ def main():
     loaderFactory = LoaderFactory(lark_client=lark_client, logger=logger)
     loaders = [loaderFactory.get_loader(datasource) for datasource in datasources]
 
-    docs = []
-    for loader in loaders:
-        docs.extend(loader.load())
-
-    for doc in docs:
-        logger.info("Loaded document from %s", doc.metadata.get("source", "unknown"))
-        logger.debug("Document content: %s", doc.page_content[:100])
-
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=config.chunk_size,
         chunk_overlap=config.chunk_overlap,
         length_function=len,
         is_separator_regex=False,
     )
-
     embeddings = EmbeddingsFactory.get_embeddings(config.embeddings)
-
     vector_store = MilvusVectorStore(
         config.vector_store,
         chunk_size=config.chunk_size,
@@ -95,9 +89,17 @@ def main():
         embeddings=embeddings,
         logger=logger,
     )
-    chunks = splitter.split_documents(docs)
-    logger.info("Adding %d document chunks to the vector store", len(chunks))
-    vector_store.add_documents(chunks)
+
+    for loader in loaders:
+        for doc in loader.lazy_load():
+            logger.debug("Document content: %s", doc.page_content[:20])
+            logger.info(
+                "Loaded document from %s", doc.metadata.get("source", "unknown")
+            )
+            document = doc  # make a copy from iterator to single Document
+            chunks = splitter.split_documents([document])
+            logger.info("Adding %d document chunks to the vector store", len(chunks))
+            vector_store.add_documents(chunks)
 
     queries = [
         "What is Barito project name is inspired from?",

@@ -1,7 +1,11 @@
 import logging
 
 
-from loader.lark import LarkSuiteDocLoader, LarkSuiteWikiLoader
+from loader.lark import (
+    LarkSuiteDocLoader,
+    LarkSuiteWikiLoader,
+    LarkSuiteWikiSpaceLoader,
+)
 
 
 from langchain_core.document_loaders.base import BaseLoader
@@ -31,7 +35,9 @@ class Datasource:
             raise ValueError("Lark document source id is missing.")
         elif self.type == "lark-wiki" and not self.id:
             raise ValueError("Lark wiki source id is missing.")
-        elif self.type not in ["directory", "lark-doc", "lark-wiki"]:
+        elif self.type == "lark-space" and not self.id:
+            raise ValueError("Lark space source id is missing.")
+        elif self.type not in ["directory", "lark-doc", "lark-wiki", "lark-space"]:
             raise ValueError(f"Unsupported document source type: {self.type}")
 
 
@@ -55,6 +61,11 @@ class LoaderFactory:
             return LarkSuiteWikiLoader(
                 client=self.lark_client,
                 wiki_id=datasource.id,
+            )
+        elif datasource.type == "lark-space":
+            return LarkSuiteWikiSpaceLoader(
+                client=self.lark_client,
+                space_id=datasource.id,
             )
         else:
             raise ValueError(f"Unsupported source type: {datasource.type}")
