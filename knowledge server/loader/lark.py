@@ -1,7 +1,8 @@
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 import lark_oapi as lark
-from lark_oapi.api.docx.v1 import RawContentDocumentRequest, GetDocumentRequest
+from lark_oapi.api.docs.v1 import GetContentRequest
+from lark_oapi.api.docx.v1 import GetDocumentRequest
 from lark_oapi.api.wiki.v2 import (
     GetNodeSpaceRequest,
     GetSpaceRequest,
@@ -22,16 +23,6 @@ class LarkSuiteDocLoader(BaseLoader):
         self.document_id = document_id
 
     def lazy_load(self) -> Iterator[Document]:
-        request_raw = (
-            RawContentDocumentRequest.builder().document_id(self.document_id).build()
-        )
-
-        response_raw = self.client.docx.v1.document.raw_content(request_raw)
-        if not response_raw.success():
-            raise RuntimeError(
-                f"Failed to fetch document raw content: {response_raw.msg}"
-            )
-
         request_metadata = (
             GetDocumentRequest.builder().document_id(self.document_id).build()
         )
@@ -50,7 +41,21 @@ class LarkSuiteDocLoader(BaseLoader):
             "source": f"lark-doc://{self.document_id}",
         }
 
-        content = response_raw.data.content
+        request_content = (
+            GetContentRequest.builder()
+            .content_type("markdown")
+            .doc_type("docx")
+            .doc_token(self.document_id)
+            .build()
+        )
+
+        response_content = self.client.docs.v1.content.get(request_content)
+        if not response_content.success():
+            raise RuntimeError(
+                f"Failed to fetch document content: {response_content.msg}"
+            )
+
+        content = response_content.data.content
 
         if content is None:
             content = ""
@@ -80,7 +85,7 @@ class LarkSuiteWikiLoader(LarkSuiteDocLoader):
             raise RuntimeError("Wiki node space does not contain a valid document ID.")
         super().__init__(client=client, document_id=str(document_id))
 
-    def lazy_load(self):
+    def lazy_load(self) -> Iterator[Document]:
         document = super().lazy_load()
         for doc in document:
             doc.metadata["source"] = f"lark-wiki://{self.wiki_id}"
